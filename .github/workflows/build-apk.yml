@@ -22,12 +22,13 @@ jobs:
           echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
           BT=$(ls -d "$SDK"/build-tools/* | sort -V | tail -1)
           echo "BUILD_TOOLS=$BT" >> "$GITHUB_ENV"
-          echo "ANDROID_JAR=$SDK/platforms/android-35/android.jar" >> "$GITHUB_ENV"
-          if [ ! -f "$ANDROID_JAR" ]; then
+          AJ="$SDK/platforms/android-35/android.jar"
+          echo "ANDROID_JAR=$AJ" >> "$GITHUB_ENV"
+          if [ ! -f "$AJ" ]; then
             yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
             "$SDK/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35"
           fi
-          echo "BT=$BT"; ls -l "$ANDROID_JAR"
+          echo "BT=$BT"; ls -l "$AJ"
 
       - name: 下载新版 R8（避免旧版 d8 与 JDK 不兼容）
         run: |
