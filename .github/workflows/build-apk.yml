@@ -16,10 +16,18 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
-
-      - name: 安装 Android SDK 组件
-        run: sdkmanager "platforms;android-35" "build-tools;34.0.0"
+      - name: 准备 Android SDK（使用 runner 预装 SDK）
+        run: |
+          SDK=/usr/local/lib/android/sdk
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          BT=$(ls -d "$SDK"/build-tools/* | sort -V | tail -1)
+          echo "BUILD_TOOLS=$BT" >> "$GITHUB_ENV"
+          echo "ANDROID_JAR=$SDK/platforms/android-35/android.jar" >> "$GITHUB_ENV"
+          if [ ! -f "$ANDROID_JAR" ]; then
+            yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+            "$SDK/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35"
+          fi
+          echo "BT=$BT"; ls -l "$ANDROID_JAR"
 
       - name: 下载新版 R8（避免旧版 d8 与 JDK 不兼容）
         run: |
