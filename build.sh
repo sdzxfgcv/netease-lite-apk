@@ -20,7 +20,7 @@ echo "[1/6] 编译资源"
 "$BT/aapt2" compile --dir res -o build/res.zip
 "$BT/aapt2" link -o build/base.apk -I "$AJ" --manifest AndroidManifest.xml \
   -R build/res.zip --java build/gen --min-sdk-version 21 --target-sdk-version 33 \
-  --version-code 1 --version-name 1.0 --auto-add-overlay
+  --version-code 2 --version-name 1.1 --auto-add-overlay
 
 echo "[2/6] 编译 Java"
 javac --release 8 -encoding UTF-8 -nowarn -cp "$AJ" -d build/classes \
@@ -44,8 +44,8 @@ echo "[5/6] 签名"
 "$BT/apksigner" sign --ks debug.keystore --ks-pass pass:android \
   --key-pass pass:android --ks-key-alias netease \
   --v1-signing-enabled true --v2-signing-enabled true \
-  --out output/NeteaseLite-v1.0.apk build/aligned.apk
+  --out output/NeteaseLite-v1.1.apk build/aligned.apk
 
 echo "[6/6] 验证"
-"$BT/apksigner" verify output/NeteaseLite-v1.0.apk
-ls -lh output/NeteaseLite-v1.0.apk
+"$BT/apksigner" verify output/NeteaseLite-v1.1.apk
+ls -lh output/NeteaseLite-v1.1.apk

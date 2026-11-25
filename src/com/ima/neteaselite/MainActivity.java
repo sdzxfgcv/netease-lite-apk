@@ -90,10 +90,27 @@ public class MainActivity extends Activity {
             getWindow().setStatusBarColor(ACCENT);
         } catch (Exception ignored) {
         }
-        int savedMode = getSharedPreferences("settings", MODE_PRIVATE).getInt("api_mode", Api.MODE_WEB);
-        Api.setMode(savedMode);
+        android.content.SharedPreferences sp = getSharedPreferences("settings", MODE_PRIVATE);
+        boolean auto = sp.getBoolean("api_auto", true);
+        Api.setAuto(auto);
+        if (auto) {
+            Api.setBestSearchMode(sp.getInt("api_best", Api.MODE_WEB));
+        } else {
+            Api.setFixedMode(sp.getInt("api_mode", Api.MODE_WEB));
+        }
         buildUi();
         loadTopList(19723756);
+        if (auto) {
+            pool.execute(() -> {
+                Api.probe();
+                final int best = Api.bestSearchMode();
+                ui.post(() -> {
+                    refreshModeView();
+                    getSharedPreferences("settings", MODE_PRIVATE).edit()
+                            .putInt("api_best", best).apply();
+                });
+            });
+        }
     }
 
     @Override
@@ -184,20 +201,13 @@ public class MainActivity extends Activity {
         tabs.addView(chip("热歌榜", 3778678), chipLp());
         tabs.addView(chip("原创榜", 2884035), chipLp());
         modeView = new TextView(this);
-        modeView.setText("接口:" + Api.modeName());
+        modeView.setText(Api.currentLabel());
         modeView.setTextSize(12);
         modeView.setTextColor(ACCENT);
         modeView.setGravity(Gravity.CENTER);
         modeView.setPadding(dp(12), dp(7), dp(12), dp(7));
         modeView.setBackground(round(0xFFFFF2F3, 16, 0xFFF3C2CB, 1));
-        modeView.setOnClickListener(v -> {
-            int next = (Api.getMode() + 1) % 3;
-            Api.setMode(next);
-            getSharedPreferences("settings", MODE_PRIVATE).edit()
-                    .putInt("api_mode", next).apply();
-            modeView.setText("接口:" + Api.modeName());
-            toast("已切换：" + Api.modeName() + "接口，失败时自动尝试其他接口");
-        });
+        modeView.setOnClickListener(v -> showModeDialog());
         tabs.addView(modeView, chipLp());
         hs.addView(tabs);
         root.addView(hs, new LinearLayout.LayoutParams(
@@ -265,6 +275,52 @@ public class MainActivity extends Activity {
         tv.setBackground(round(0xFFFFFFFF, 16, 0xFFE7EAEE, 1));
         tv.setOnClickListener(v -> loadTopList(topId));
         return tv;
+    }
+
+    private void refreshModeView() {
+        if (modeView != null) modeView.setText(Api.currentLabel());
+    }
+
+    private void showModeDialog() {
+        final String[] items = {
+                "自动择优（推荐）",
+                "固定网页版接口",
+                "固定手机端接口",
+                "固定电脑端接口",
+                "固定 macOS 接口",
+                "固定 Windows 接口"
+        };
+        int checked = Api.isAuto() ? 0 : Api.getFixedMode() + 1;
+        new AlertDialog.Builder(this)
+                .setTitle("接口选择")
+                .setSingleChoiceItems(items, checked, (dialog, which) -> {
+                    android.content.SharedPreferences sp =
+                            getSharedPreferences("settings", MODE_PRIVATE);
+                    if (which == 0) {
+                        Api.setAuto(true);
+                        sp.edit().putBoolean("api_auto", true).apply();
+                        toast("自动择优：按速度选接口，失败自动换，无需手动切换");
+                        refreshModeView();
+                        pool.execute(() -> {
+                            Api.probe();
+                            final int best = Api.bestSearchMode();
+                            ui.post(() -> {
+                                refreshModeView();
+                                getSharedPreferences("settings", MODE_PRIVATE).edit()
+                                        .putInt("api_best", best).apply();
+                            });
+                        });
+                    } else {
+                        int m = which - 1;
+                        Api.setFixedMode(m);
+                        sp.edit().putBoolean("api_auto", false)
+                                .putInt("api_mode", m).apply();
+                        refreshModeView();
+                        toast("已固定为" + Api.modeName(m) + "接口");
+                    }
+                    dialog.dismiss();
+                })
+                .show();
     }
 
     private View buildPlayerBar() {
